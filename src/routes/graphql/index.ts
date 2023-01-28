@@ -3,6 +3,7 @@ import { FastifyPluginAsyncJsonSchemaToTs } from "@fastify/type-provider-json-sc
 import {
   graphql,
   GraphQLID,
+  GraphQLInt,
   GraphQLList,
   GraphQLNonNull,
   GraphQLObjectType,
@@ -230,6 +231,121 @@ const plugin: FastifyPluginAsyncJsonSchemaToTs = async (
               resolve: async () => {
                 const users = await fastify.db.users.findMany();
                 return users;
+              },
+            },
+            updateUser: {
+              type: GraphQLUser,
+              args: {
+                id: { type: new GraphQLNonNull(GraphQLID) },
+                firstName: { type: GraphQLString },
+                lastName: { type: GraphQLString },
+                email: { type: GraphQLString },
+              },
+              resolve: async (_: any, args: any) => {
+                const user = await fastify.db.users.findOne({
+                  key: "id",
+                  equals: args.id,
+                });
+
+                if (user === null) {
+                  throw fastify.httpErrors.notFound("User not found");
+                }
+
+                const updatedUser = await fastify.db.users.change(
+                  args.id,
+                  args
+                );
+
+                return updatedUser;
+              },
+            },
+            updateProfile: {
+              type: GraphQLProfile,
+              args: {
+                id: { type: new GraphQLNonNull(GraphQLID) },
+                avatar: { type: GraphQLString },
+                sex: { type: GraphQLString },
+                birthday: { type: GraphQLString },
+                country: { type: GraphQLString },
+                city: { type: GraphQLString },
+                street: { type: GraphQLString },
+                memberTypeId: { type: GraphQLString },
+              },
+              resolve: async (_: any, args: any) => {
+                const profile = await fastify.db.profiles.findOne({
+                  key: "id",
+                  equals: args.id,
+                });
+
+                if (profile === null) {
+                  throw fastify.httpErrors.notFound("Profile not found");
+                }
+
+                const memberType = await fastify.db.memberTypes.findOne({
+                  key: "id",
+                  equals: args.memberTypeId,
+                });
+
+                if (memberType === null) {
+                  throw fastify.httpErrors.notFound("MemberType not found");
+                }
+
+                const updatedProfile = await fastify.db.profiles.change(
+                  args.id,
+                  args
+                );
+
+                return updatedProfile;
+              },
+            },
+            updatePost: {
+              type: GraphQLPost,
+              args: {
+                id: { type: new GraphQLNonNull(GraphQLID) },
+                title: { type: GraphQLString },
+                content: { type: GraphQLString },
+              },
+              resolve: async (_: any, args: any) => {
+                const post = await fastify.db.posts.findOne({
+                  key: "id",
+                  equals: args.id,
+                });
+
+                if (post === null) {
+                  throw fastify.httpErrors.notFound("Post not found");
+                }
+
+                const updatedPost = await fastify.db.posts.change(
+                  args.id,
+                  args
+                );
+
+                return updatedPost;
+              },
+            },
+            updateMemberType: {
+              type: GraphQLMemberType,
+              args: {
+                id: { type: new GraphQLNonNull(GraphQLID) },
+                discount: { type: GraphQLInt },
+                mouthPostsLimit: { type: GraphQLInt },
+              },
+              resolve: async (_: any, args: any) => {
+                const memberType = await fastify.db.memberTypes.findOne({
+                  key: "id",
+                  equals: args.id,
+                });
+
+                if (memberType === null) {
+                  throw fastify.httpErrors.notFound("MemberType not found");
+                }
+
+                const updatedMemberType = await fastify.db.memberTypes.change(
+                  args.id,
+                  args
+                );
+
+                return updatedMemberType;
               },
             },
           }),
