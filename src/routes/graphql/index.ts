@@ -13,6 +13,9 @@ import {
   GraphQLPost,
   GraphQLProfile,
   GraphQLUserWithReatedEntit,
+  GraphQLUserWithProfile,
+  GraphQLUserWithSubscrabed,
+  GraphQLUserWithPosts,
 } from "../types";
 import { graphqlBodySchema } from "./schema";
 
@@ -60,6 +63,11 @@ const plugin: FastifyPluginAsyncJsonSchemaToTs = async (
       const GraphQLUserWithReatedEntitType = await GraphQLUserWithReatedEntit(
         fastify
       );
+      const GraphQLUserWithProfileType = await GraphQLUserWithProfile(fastify);
+      const GraphQLUserWithSubscrabedType = await GraphQLUserWithSubscrabed(
+        fastify
+      );
+      const GraphQLUserWithPostsType = await GraphQLUserWithPosts(fastify);
 
       const shema = new GraphQLSchema({
         query: new GraphQLObjectType({
@@ -188,6 +196,38 @@ const plugin: FastifyPluginAsyncJsonSchemaToTs = async (
                 }
 
                 return user;
+              },
+            },
+            getUsersWithProfile: {
+              type: new GraphQLList(GraphQLUserWithProfileType),
+              resolve: async () => {
+                const users = await fastify.db.users.findMany();
+                return users;
+              },
+            },
+            getUserWithPosts: {
+              type: GraphQLUserWithPostsType,
+              args: {
+                id: { type: GraphQLID },
+              },
+              resolve: async (_: any, args: any) => {
+                const user = await fastify.db.users.findOne({
+                  key: "id",
+                  equals: args.id,
+                });
+
+                if (user === null) {
+                  throw fastify.httpErrors.notFound("User not found");
+                }
+
+                return user;
+              },
+            },
+            getUsersWithSubscrabed: {
+              type: new GraphQLList(GraphQLUserWithSubscrabedType),
+              resolve: async () => {
+                const users = await fastify.db.users.findMany();
+                return users;
               },
             },
           }),
