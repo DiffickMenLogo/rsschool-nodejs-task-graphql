@@ -4,6 +4,7 @@ import {
   GraphQLList,
   GraphQLObjectType,
   GraphQLSchema,
+  GraphQLString,
 } from "graphql";
 import {
   GraphQLUser,
@@ -13,6 +14,43 @@ import {
 } from "../types";
 import { graphqlBodySchema } from "./schema";
 
+let i = 1;
+
+const testData = async (fastify: any) => {
+  const user = await fastify.db.users.create({
+    id: `user-${i}`,
+    firstName: `user-${i}-firstName`,
+    lastName: `user-${i}-lastName`,
+    email: `user-${i}-email`,
+    subscribedToUserIds: [],
+  });
+
+  const memberType = await fastify.db.memberTypes.create({
+    id: `memberType-${i}`,
+    name: `memberType-${i}-name`,
+  });
+
+  const profile = await fastify.db.profiles.create({
+    id: `profile-${i}`,
+    userId: user.id,
+    memberTypeId: memberType.id,
+  });
+
+  const post = await fastify.db.posts.create({
+    id: `post-${i}`,
+    userId: user.id,
+    content: `post-${i}-content`,
+  });
+
+  i++;
+
+  return {
+    user,
+    memberType,
+    profile,
+    post,
+  };
+};
 const plugin: FastifyPluginAsyncJsonSchemaToTs = async (
   fastify
 ): Promise<void> => {
@@ -24,6 +62,10 @@ const plugin: FastifyPluginAsyncJsonSchemaToTs = async (
       },
     },
     async function (request, reply) {
+      if (i <= 5) {
+        await testData(fastify);
+      }
+
       const shema = new GraphQLSchema({
         query: new GraphQLObjectType({
           name: "Query",
@@ -52,6 +94,78 @@ const plugin: FastifyPluginAsyncJsonSchemaToTs = async (
                   resolve: async () => {
                     const memberTypes = await fastify.db.memberTypes.findMany();
                     return memberTypes;
+                  },
+                },
+                getUser: {
+                  type: GraphQLUser,
+                  args: {
+                    id: { type: GraphQLString },
+                  },
+                  reslove: async (_: any, args: any) => {
+                    const user = await fastify.db.users.findOne({
+                      key: "id",
+                      equals: args.id,
+                    });
+
+                    if (user === null) {
+                      throw fastify.httpErrors.notFound("User not found");
+                    }
+
+                    return user;
+                  },
+                },
+                getProfile: {
+                  type: GraphQLProfile,
+                  args: {
+                    id: { type: GraphQLString },
+                  },
+                  reslove: async (_: any, args: any) => {
+                    const profile = await fastify.db.profiles.findOne({
+                      key: "id",
+                      equals: args.id,
+                    });
+
+                    if (profile === null) {
+                      throw fastify.httpErrors.notFound("Profile not found");
+                    }
+
+                    return profile;
+                  },
+                },
+                getPost: {
+                  type: GraphQLPost,
+                  args: {
+                    id: { type: GraphQLString },
+                  },
+                  reslove: async (_: any, args: any) => {
+                    const post = await fastify.db.posts.findOne({
+                      key: "id",
+                      equals: args.id,
+                    });
+
+                    if (post === null) {
+                      throw fastify.httpErrors.notFound("Post not found");
+                    }
+
+                    return post;
+                  },
+                },
+                getMemberType: {
+                  type: GraphQLMemberType,
+                  args: {
+                    id: { type: GraphQLString },
+                  },
+                  reslove: async (_: any, args: any) => {
+                    const memberType = await fastify.db.memberTypes.findOne({
+                      key: "id",
+                      equals: args.id,
+                    });
+
+                    if (memberType === null) {
+                      throw fastify.httpErrors.notFound("MemberType not found");
+                    }
+
+                    return memberType;
                   },
                 },
               },
