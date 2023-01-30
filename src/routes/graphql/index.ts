@@ -1,4 +1,12 @@
+import { UnsubscribeFromUserInput } from "./../types/inputTypes/UnsubscribeFromUserInput";
 import { CreateUserInput } from "./../types/inputTypes/CreateUserInput";
+import {
+  getMemberTypeLoader,
+  getSubscribedToUserDataLoader,
+  getUserPostsDataLoader,
+  getUserProfileDataLoader,
+  getUserSubscribedToDataLoader,
+} from "../types/helpers/helpersToTypes";
 import { FastifyPluginAsyncJsonSchemaToTs } from "@fastify/type-provider-json-schema-to-ts";
 import {
   ExecutionResult,
@@ -25,6 +33,7 @@ import {
 } from "../types";
 import { graphqlBodySchema } from "./schema";
 import depthLimit = require("graphql-depth-limit");
+import { SubscribeToUserInput } from "../types/inputTypes/SubscribeToUserInput";
 
 const DEPTH_LIMIT = 6;
 const plugin: FastifyPluginAsyncJsonSchemaToTs = async (
@@ -38,7 +47,11 @@ const plugin: FastifyPluginAsyncJsonSchemaToTs = async (
       },
     },
     async function (request, reply) {
-      const { query } = request.body;
+      const { query, variables } = request.body;
+
+      if (!query) {
+        throw fastify.httpErrors.badRequest("Query is required");
+      }
 
       const shema = new GraphQLSchema({
         query: new GraphQLObjectType({
@@ -152,15 +165,15 @@ const plugin: FastifyPluginAsyncJsonSchemaToTs = async (
             createUser: {
               type: GraphQLUser,
               args: {
-                varibales: {
+                variables: {
                   type: new GraphQLNonNull(CreateUserInput),
                 },
               },
               resolve: async (_: any, args: any) => {
                 const user = await fastify.db.users.create({
-                  firstName: args.firstName,
-                  lastName: args.lastName,
-                  email: args.email,
+                  firstName: args.variables.firstName,
+                  lastName: args.variables.lastName,
+                  email: args.variables.email,
                 });
 
                 return user;
@@ -169,14 +182,14 @@ const plugin: FastifyPluginAsyncJsonSchemaToTs = async (
             createProfile: {
               type: GraphQLProfile,
               args: {
-                varibles: {
+                variables: {
                   type: new GraphQLNonNull(CreateProfileInput),
                 },
               },
               resolve: async (_: any, args: any) => {
                 const user = await fastify.db.users.findOne({
                   key: "id",
-                  equals: args.userId,
+                  equals: args.variables.userId,
                 });
 
                 if (user === null) {
@@ -185,7 +198,7 @@ const plugin: FastifyPluginAsyncJsonSchemaToTs = async (
 
                 const memberType = await fastify.db.memberTypes.findOne({
                   key: "id",
-                  equals: args.memberTypeId,
+                  equals: args.variables.memberTypeId,
                 });
 
                 if (memberType === null) {
@@ -195,7 +208,7 @@ const plugin: FastifyPluginAsyncJsonSchemaToTs = async (
                 const userAlreadyHasAProfile =
                   await fastify.db.profiles.findOne({
                     key: "userId",
-                    equals: args.userId,
+                    equals: args.variables.userId,
                   });
 
                 if (userAlreadyHasAProfile !== null) {
@@ -205,14 +218,14 @@ const plugin: FastifyPluginAsyncJsonSchemaToTs = async (
                 }
 
                 const profile = await fastify.db.profiles.create({
-                  userId: args.userId,
-                  memberTypeId: args.memberTypeId,
-                  avatar: args.avatar,
-                  sex: args.sex,
-                  birthday: args.birthday,
-                  country: args.country,
-                  city: args.city,
-                  street: args.street,
+                  userId: args.variables.userId,
+                  memberTypeId: args.variables.memberTypeId,
+                  avatar: args.variables.avatar,
+                  sex: args.variables.sex,
+                  birthday: args.variables.birthday,
+                  country: args.variables.country,
+                  city: args.variables.city,
+                  street: args.variables.street,
                 });
 
                 return profile;
@@ -221,14 +234,14 @@ const plugin: FastifyPluginAsyncJsonSchemaToTs = async (
             createPost: {
               type: GraphQLPost,
               args: {
-                varibles: {
+                variables: {
                   type: new GraphQLNonNull(CreatePostInput),
                 },
               },
               resolve: async (_: any, args: any) => {
                 const user = await fastify.db.users.findOne({
                   key: "id",
-                  equals: args.userId,
+                  equals: args.variables.userId,
                 });
 
                 if (user === null) {
@@ -236,9 +249,9 @@ const plugin: FastifyPluginAsyncJsonSchemaToTs = async (
                 }
 
                 const post = await fastify.db.posts.create({
-                  userId: args.userId,
-                  title: args.title,
-                  content: args.content,
+                  userId: args.variables.userId,
+                  title: args.variables.title,
+                  content: args.variables.content,
                 });
 
                 return post;
@@ -247,14 +260,14 @@ const plugin: FastifyPluginAsyncJsonSchemaToTs = async (
             updateUser: {
               type: GraphQLUser,
               args: {
-                varibles: {
+                variables: {
                   type: new GraphQLNonNull(UpdateUserInput),
                 },
               },
               resolve: async (_: any, args: any) => {
                 const user = await fastify.db.users.findOne({
                   key: "id",
-                  equals: args.id,
+                  equals: args.variables.id,
                 });
 
                 if (user === null) {
@@ -262,8 +275,8 @@ const plugin: FastifyPluginAsyncJsonSchemaToTs = async (
                 }
 
                 const updatedUser = await fastify.db.users.change(
-                  args.id,
-                  args
+                  args.variables.id,
+                  args.variables
                 );
 
                 return updatedUser;
@@ -272,14 +285,14 @@ const plugin: FastifyPluginAsyncJsonSchemaToTs = async (
             updateProfile: {
               type: GraphQLProfile,
               args: {
-                varibles: {
+                variables: {
                   type: new GraphQLNonNull(UpdateProfileInput),
                 },
               },
               resolve: async (_: any, args: any) => {
                 const profile = await fastify.db.profiles.findOne({
                   key: "id",
-                  equals: args.id,
+                  equals: args.variables.id,
                 });
 
                 if (profile === null) {
@@ -288,7 +301,7 @@ const plugin: FastifyPluginAsyncJsonSchemaToTs = async (
 
                 const memberType = await fastify.db.memberTypes.findOne({
                   key: "id",
-                  equals: args.memberTypeId,
+                  equals: args.variables.memberTypeId,
                 });
 
                 if (memberType === null) {
@@ -296,8 +309,8 @@ const plugin: FastifyPluginAsyncJsonSchemaToTs = async (
                 }
 
                 const updatedProfile = await fastify.db.profiles.change(
-                  args.id,
-                  args
+                  args.variables.id,
+                  args.variables
                 );
 
                 return updatedProfile;
@@ -306,14 +319,14 @@ const plugin: FastifyPluginAsyncJsonSchemaToTs = async (
             updatePost: {
               type: GraphQLPost,
               args: {
-                varibles: {
+                variables: {
                   type: new GraphQLNonNull(UpdatePostInput),
                 },
               },
               resolve: async (_: any, args: any) => {
                 const post = await fastify.db.posts.findOne({
                   key: "id",
-                  equals: args.id,
+                  equals: args.variables.id,
                 });
 
                 if (post === null) {
@@ -321,8 +334,8 @@ const plugin: FastifyPluginAsyncJsonSchemaToTs = async (
                 }
 
                 const updatedPost = await fastify.db.posts.change(
-                  args.id,
-                  args
+                  args.variables.id,
+                  args.variables
                 );
 
                 return updatedPost;
@@ -331,14 +344,14 @@ const plugin: FastifyPluginAsyncJsonSchemaToTs = async (
             updateMemberType: {
               type: GraphQLMemberType,
               args: {
-                varibles: {
+                variables: {
                   type: new GraphQLNonNull(UpdateMemberTypeInput),
                 },
               },
               resolve: async (_: any, args: any) => {
                 const memberType = await fastify.db.memberTypes.findOne({
                   key: "id",
-                  equals: args.id,
+                  equals: args.variables.id,
                 });
 
                 if (memberType === null) {
@@ -346,8 +359,8 @@ const plugin: FastifyPluginAsyncJsonSchemaToTs = async (
                 }
 
                 const updatedMemberType = await fastify.db.memberTypes.change(
-                  args.id,
-                  args
+                  args.variables.id,
+                  args.variables
                 );
 
                 return updatedMemberType;
@@ -356,13 +369,14 @@ const plugin: FastifyPluginAsyncJsonSchemaToTs = async (
             subscribeToUser: {
               type: GraphQLUser,
               args: {
-                id: { type: new GraphQLNonNull(GraphQLID) },
-                subscribeToUserId: { type: new GraphQLNonNull(GraphQLID) },
+                variables: {
+                  type: new GraphQLNonNull(SubscribeToUserInput),
+                },
               },
               reslove: async (_: any, args: any) => {
                 const user = await fastify.db.users.findOne({
                   key: "id",
-                  equals: args.id,
+                  equals: args.variables.currentUserId,
                 });
 
                 if (user === null) {
@@ -370,7 +384,7 @@ const plugin: FastifyPluginAsyncJsonSchemaToTs = async (
                 }
                 const subscribeToUser = await fastify.db.users.findOne({
                   key: "id",
-                  equals: args.subscribeToUserId,
+                  equals: args.variables.subscribeToUserId,
                 });
 
                 if (subscribeToUser === null) {
@@ -380,7 +394,8 @@ const plugin: FastifyPluginAsyncJsonSchemaToTs = async (
                 }
 
                 const userTriesToSubscribeToHimself =
-                  args.id === args.subscribeToUserId;
+                  args.variables.currentUserId ===
+                  args.variables.subscribeToUserId;
 
                 if (userTriesToSubscribeToHimself) {
                   throw fastify.httpErrors.badRequest(
@@ -389,7 +404,9 @@ const plugin: FastifyPluginAsyncJsonSchemaToTs = async (
                 }
 
                 const userAlreadySubscribed =
-                  subscribeToUser.subscribedToUserIds.includes(args.id);
+                  subscribeToUser.subscribedToUserIds.includes(
+                    args.variables.currentUserId
+                  );
 
                 if (userAlreadySubscribed) {
                   throw fastify.httpErrors.badRequest(
@@ -398,7 +415,7 @@ const plugin: FastifyPluginAsyncJsonSchemaToTs = async (
                 }
 
                 const patchedUser = await fastify.db.users.change(
-                  args.subscribeToUserId,
+                  args.variables.subscribeToUserId,
                   {
                     subscribedToUserIds: [
                       ...subscribeToUser.subscribedToUserIds,
@@ -413,13 +430,14 @@ const plugin: FastifyPluginAsyncJsonSchemaToTs = async (
             unsubscribeFromUser: {
               type: GraphQLUser,
               args: {
-                id: { type: new GraphQLNonNull(GraphQLID) },
-                unsubscribeFromUserId: { type: new GraphQLNonNull(GraphQLID) },
+                variables: {
+                  type: new GraphQLNonNull(UnsubscribeFromUserInput),
+                },
               },
               resolve: async (_: any, args: any) => {
                 const user = await fastify.db.users.findOne({
                   key: "id",
-                  equals: args.id,
+                  equals: args.variables.currentUserId,
                 });
 
                 if (user === null) {
@@ -428,7 +446,7 @@ const plugin: FastifyPluginAsyncJsonSchemaToTs = async (
 
                 const unsubscribeFromUser = await fastify.db.users.findOne({
                   key: "id",
-                  equals: args.unsubscribeFromUserId,
+                  equals: args.variables.unsubscribeFromUserId,
                 });
 
                 if (unsubscribeFromUser === null) {
@@ -438,7 +456,8 @@ const plugin: FastifyPluginAsyncJsonSchemaToTs = async (
                 }
 
                 const userTriesToUnsubscribeFromHimself =
-                  args.id === args.unsubscribeFromUserId;
+                  args.variables.currentUserId ===
+                  args.variables.unsubscribeFromUserId;
 
                 if (userTriesToUnsubscribeFromHimself) {
                   throw fastify.httpErrors.badRequest(
@@ -448,7 +467,9 @@ const plugin: FastifyPluginAsyncJsonSchemaToTs = async (
 
                 try {
                   const subscribedUserIndex =
-                    unsubscribeFromUser.subscribedToUserIds.indexOf(args.id);
+                    unsubscribeFromUser.subscribedToUserIds.indexOf(
+                      args.variables.currentUserId
+                    );
 
                   unsubscribeFromUser.subscribedToUserIds.splice(
                     subscribedUserIndex,
@@ -456,7 +477,7 @@ const plugin: FastifyPluginAsyncJsonSchemaToTs = async (
                   );
 
                   const patchedUser = await fastify.db.users.change(
-                    args.unsubscribeFromUserId,
+                    args.variables.unsubscribeFromUserId,
                     {
                       subscribedToUserIds:
                         unsubscribeFromUser.subscribedToUserIds,
@@ -484,15 +505,29 @@ const plugin: FastifyPluginAsyncJsonSchemaToTs = async (
         return result;
       }
 
-      if (typeof request.body.query !== "undefined") {
-        const result = await graphql({
-          schema: shema,
-          source: request.body.query,
-        });
-        return result;
-      } else {
-        throw fastify.httpErrors.badRequest("Query not found");
-      }
+      const userPostsDataLoader = await getUserPostsDataLoader(fastify);
+      const userProfileDataLoader = await getUserProfileDataLoader(fastify);
+      const memberTypeLoader = await getMemberTypeLoader(fastify);
+      const userSubscribedToDataLoader = await getUserSubscribedToDataLoader(
+        fastify
+      );
+      const subscribedToUserDataLoader = await getSubscribedToUserDataLoader(
+        fastify
+      );
+
+      return graphql({
+        schema: shema,
+        source: query!,
+        variableValues: variables,
+        contextValue: {
+          fastify,
+          userPostsDataLoader,
+          userProfileDataLoader,
+          memberTypeLoader,
+          userSubscribedToDataLoader,
+          subscribedToUserDataLoader,
+        },
+      });
     }
   );
 };

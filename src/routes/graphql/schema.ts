@@ -1,31 +1,31 @@
 export const graphqlBodySchema = {
-  type: 'object',
+  type: "object",
   properties: {
-    mutation: { type: 'string' },
-    query: { type: 'string' },
+    mutation: { type: "string" },
+    query: { type: "string" },
     variables: {
-      type: 'object',
+      type: "object",
     },
   },
   oneOf: [
     {
-      type: 'object',
-      required: ['query'],
+      type: "object",
+      required: ["query"],
       properties: {
-        query: { type: 'string' },
+        query: { type: "string" },
         variables: {
-          type: 'object',
+          type: "object",
         },
       },
       additionalProperties: false,
     },
     {
-      type: 'object',
-      required: ['mutation'],
+      type: "object",
+      required: ["mutation"],
       properties: {
-        mutation: { type: 'string' },
+        mutation: { type: "string" },
         variables: {
-          type: 'object',
+          type: "object",
         },
       },
       additionalProperties: false,
