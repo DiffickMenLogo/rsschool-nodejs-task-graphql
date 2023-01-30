@@ -348,6 +348,122 @@ const plugin: FastifyPluginAsyncJsonSchemaToTs = async (
                 return updatedMemberType;
               },
             },
+            subscribeToUser: {
+              type: GraphQLUser,
+              args: {
+                id: { type: new GraphQLNonNull(GraphQLID) },
+                subscribeToUserId: { type: new GraphQLNonNull(GraphQLID) },
+              },
+              reslove: async (_: any, args: any) => {
+                const user = await fastify.db.users.findOne({
+                  key: "id",
+                  equals: args.id,
+                });
+
+                if (user === null) {
+                  throw fastify.httpErrors.notFound("User not found");
+                }
+                const subscribeToUser = await fastify.db.users.findOne({
+                  key: "id",
+                  equals: args.subscribeToUserId,
+                });
+
+                if (subscribeToUser === null) {
+                  throw fastify.httpErrors.notFound(
+                    "User to subscribe to not found"
+                  );
+                }
+
+                const userTriesToSubscribeToHimself =
+                  args.id === args.subscribeToUserId;
+
+                if (userTriesToSubscribeToHimself) {
+                  throw fastify.httpErrors.badRequest(
+                    "User can't subscribe to himself"
+                  );
+                }
+
+                const userAlreadySubscribed =
+                  subscribeToUser.subscribedToUserIds.includes(args.id);
+
+                if (userAlreadySubscribed) {
+                  throw fastify.httpErrors.badRequest(
+                    "User already subscribed"
+                  );
+                }
+
+                const patchedUser = await fastify.db.users.change(
+                  args.subscribeToUserId,
+                  {
+                    subscribedToUserIds: [
+                      ...subscribeToUser.subscribedToUserIds,
+                      args.id,
+                    ],
+                  }
+                );
+
+                return patchedUser;
+              },
+            },
+            unsubscribeFromUser: {
+              type: GraphQLUser,
+              args: {
+                id: { type: new GraphQLNonNull(GraphQLID) },
+                unsubscribeFromUserId: { type: new GraphQLNonNull(GraphQLID) },
+              },
+              resolve: async (_: any, args: any) => {
+                const user = await fastify.db.users.findOne({
+                  key: "id",
+                  equals: args.id,
+                });
+
+                if (user === null) {
+                  throw fastify.httpErrors.notFound("User not found");
+                }
+
+                const unsubscribeFromUser = await fastify.db.users.findOne({
+                  key: "id",
+                  equals: args.unsubscribeFromUserId,
+                });
+
+                if (unsubscribeFromUser === null) {
+                  throw fastify.httpErrors.notFound(
+                    "User to unsubscribe from not found"
+                  );
+                }
+
+                const userTriesToUnsubscribeFromHimself =
+                  args.id === args.unsubscribeFromUserId;
+
+                if (userTriesToUnsubscribeFromHimself) {
+                  throw fastify.httpErrors.badRequest(
+                    "User can't unsubscribe from himself"
+                  );
+                }
+
+                try {
+                  const subscribedUserIndex =
+                    unsubscribeFromUser.subscribedToUserIds.indexOf(args.id);
+
+                  unsubscribeFromUser.subscribedToUserIds.splice(
+                    subscribedUserIndex,
+                    1
+                  );
+
+                  const patchedUser = await fastify.db.users.change(
+                    args.unsubscribeFromUserId,
+                    {
+                      subscribedToUserIds:
+                        unsubscribeFromUser.subscribedToUserIds,
+                    }
+                  );
+
+                  return patchedUser;
+                } catch (error: any) {
+                  throw fastify.httpErrors.badRequest(error);
+                }
+              },
+            },
           }),
         }),
         mutation: new GraphQLObjectType({
