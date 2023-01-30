@@ -1,12 +1,15 @@
 import { CreateUserInput } from "./../types/inputTypes/CreateUserInput";
 import { FastifyPluginAsyncJsonSchemaToTs } from "@fastify/type-provider-json-schema-to-ts";
 import {
+  ExecutionResult,
   graphql,
   GraphQLID,
   GraphQLList,
   GraphQLNonNull,
   GraphQLObjectType,
   GraphQLSchema,
+  parse,
+  validate,
 } from "graphql";
 import {
   GraphQLUser,
@@ -21,6 +24,9 @@ import {
   UpdateMemberTypeInput,
 } from "../types";
 import { graphqlBodySchema } from "./schema";
+import depthLimit = require("graphql-depth-limit");
+
+const DEPTH_LIMIT = 6;
 const plugin: FastifyPluginAsyncJsonSchemaToTs = async (
   fastify
 ): Promise<void> => {
@@ -32,6 +38,8 @@ const plugin: FastifyPluginAsyncJsonSchemaToTs = async (
       },
     },
     async function (request, reply) {
+      const { query } = request.body;
+
       const shema = new GraphQLSchema({
         query: new GraphQLObjectType({
           name: "Query",
@@ -464,6 +472,17 @@ const plugin: FastifyPluginAsyncJsonSchemaToTs = async (
           }),
         }),
       });
+
+      const errors = validate(shema, parse(query!), [depthLimit(DEPTH_LIMIT)]);
+
+      if (errors.length > 0) {
+        const result: ExecutionResult = {
+          errors: errors,
+          data: null,
+        };
+
+        return result;
+      }
 
       if (typeof request.body.query !== "undefined") {
         const result = await graphql({
