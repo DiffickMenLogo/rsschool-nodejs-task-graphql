@@ -1,3 +1,4 @@
+import { CreateUserInput } from "./../types/inputTypes/CreateUserInput";
 import { FastifyInstance } from "fastify";
 import { FastifyPluginAsyncJsonSchemaToTs } from "@fastify/type-provider-json-schema-to-ts";
 import {
@@ -15,6 +16,8 @@ import {
   GraphQLMemberType,
   GraphQLPost,
   GraphQLProfile,
+  CreateProfileInput,
+  CreatePostInput,
 } from "../types";
 import { graphqlBodySchema } from "./schema";
 
@@ -94,7 +97,7 @@ const plugin: FastifyPluginAsyncJsonSchemaToTs = async (
             getUser: {
               type: GraphQLUser,
               args: {
-                id: { type: GraphQLID },
+                id: { type: new GraphQLNonNull(GraphQLID) },
               },
               resolve: async (_: any, args: any) => {
                 const user = await fastify.db.users.findOne({
@@ -112,7 +115,7 @@ const plugin: FastifyPluginAsyncJsonSchemaToTs = async (
             getProfile: {
               type: GraphQLProfile,
               args: {
-                id: { type: GraphQLID },
+                id: { type: new GraphQLNonNull(GraphQLID) },
               },
               resolve: async (_: any, args: any) => {
                 const profile = await fastify.db.profiles.findOne({
@@ -130,7 +133,7 @@ const plugin: FastifyPluginAsyncJsonSchemaToTs = async (
             getPost: {
               type: GraphQLPost,
               args: {
-                id: { type: GraphQLID },
+                id: { type: new GraphQLNonNull(GraphQLID) },
               },
               resolve: async (_: any, args: any) => {
                 const post = await fastify.db.posts.findOne({
@@ -148,7 +151,7 @@ const plugin: FastifyPluginAsyncJsonSchemaToTs = async (
             getMemberType: {
               type: GraphQLMemberType,
               args: {
-                id: { type: GraphQLID },
+                id: { type: new GraphQLNonNull(GraphQLID) },
               },
               resolve: async (_: any, args: any) => {
                 const memberType = await fastify.db.memberTypes.findOne({
@@ -161,6 +164,106 @@ const plugin: FastifyPluginAsyncJsonSchemaToTs = async (
                 }
 
                 return memberType;
+              },
+            },
+          }),
+        }),
+        mutation: new GraphQLObjectType({
+          name: "Mutation",
+          fields: () => ({
+            createUser: {
+              type: GraphQLUser,
+              args: {
+                varibales: {
+                  type: new GraphQLNonNull(CreateUserInput),
+                },
+              },
+              resolve: async (_: any, args: any) => {
+                const user = await fastify.db.users.create({
+                  firstName: args.firstName,
+                  lastName: args.lastName,
+                  email: args.email,
+                });
+
+                return user;
+              },
+            },
+            createProfile: {
+              type: GraphQLProfile,
+              args: {
+                varibles: {
+                  type: new GraphQLNonNull(CreateProfileInput),
+                },
+              },
+              resolve: async (_: any, args: any) => {
+                const user = await fastify.db.users.findOne({
+                  key: "id",
+                  equals: args.userId,
+                });
+
+                if (user === null) {
+                  throw fastify.httpErrors.notFound("User not found");
+                }
+
+                const memberType = await fastify.db.memberTypes.findOne({
+                  key: "id",
+                  equals: args.memberTypeId,
+                });
+
+                if (memberType === null) {
+                  throw fastify.httpErrors.notFound("MemberType not found");
+                }
+
+                const userAlreadyHasAProfile =
+                  await fastify.db.profiles.findOne({
+                    key: "userId",
+                    equals: args.userId,
+                  });
+
+                if (userAlreadyHasAProfile !== null) {
+                  throw fastify.httpErrors.conflict(
+                    "User already has a profile"
+                  );
+                }
+
+                const profile = await fastify.db.profiles.create({
+                  userId: args.userId,
+                  memberTypeId: args.memberTypeId,
+                  avatar: args.avatar,
+                  sex: args.sex,
+                  birthday: args.birthday,
+                  country: args.country,
+                  city: args.city,
+                  street: args.street,
+                });
+
+                return profile;
+              },
+            },
+            createPost: {
+              type: GraphQLPost,
+              args: {
+                varibles: {
+                  type: new GraphQLNonNull(CreatePostInput),
+                },
+              },
+              resolve: async (_: any, args: any) => {
+                const user = await fastify.db.users.findOne({
+                  key: "id",
+                  equals: args.userId,
+                });
+
+                if (user === null) {
+                  throw fastify.httpErrors.notFound("User not found");
+                }
+
+                const post = await fastify.db.posts.create({
+                  userId: args.userId,
+                  title: args.title,
+                  content: args.content,
+                });
+
+                return post;
               },
             },
             updateUser: {
@@ -392,111 +495,6 @@ const plugin: FastifyPluginAsyncJsonSchemaToTs = async (
                 } catch (error: any) {
                   throw fastify.httpErrors.badRequest(error);
                 }
-              },
-            },
-          }),
-        }),
-        mutation: new GraphQLObjectType({
-          name: "Mutation",
-          fields: () => ({
-            createUser: {
-              type: GraphQLUser,
-              args: {
-                firstName: { type: new GraphQLNonNull(GraphQLString) },
-                lastName: { type: new GraphQLNonNull(GraphQLString) },
-                email: { type: new GraphQLNonNull(GraphQLString) },
-              },
-              resolve: async (_: any, args: any) => {
-                const user = await fastify.db.users.create({
-                  firstName: args.firstName,
-                  lastName: args.lastName,
-                  email: args.email,
-                });
-
-                return user;
-              },
-            },
-            createProfile: {
-              type: GraphQLProfile,
-              args: {
-                userId: { type: new GraphQLNonNull(GraphQLID) },
-                memberTypeId: { type: new GraphQLNonNull(GraphQLID) },
-                avatar: { type: new GraphQLNonNull(GraphQLString) },
-                sex: { type: new GraphQLNonNull(GraphQLString) },
-                birthday: { type: new GraphQLNonNull(GraphQLString) },
-                country: { type: new GraphQLNonNull(GraphQLString) },
-                city: { type: new GraphQLNonNull(GraphQLString) },
-                street: { type: new GraphQLNonNull(GraphQLString) },
-              },
-              resolve: async (_: any, args: any) => {
-                const user = await fastify.db.users.findOne({
-                  key: "id",
-                  equals: args.userId,
-                });
-
-                if (user === null) {
-                  throw fastify.httpErrors.notFound("User not found");
-                }
-
-                const memberType = await fastify.db.memberTypes.findOne({
-                  key: "id",
-                  equals: args.memberTypeId,
-                });
-
-                if (memberType === null) {
-                  throw fastify.httpErrors.notFound("MemberType not found");
-                }
-
-                const userAlreadyHasAProfile =
-                  await fastify.db.profiles.findOne({
-                    key: "userId",
-                    equals: args.userId,
-                  });
-
-                if (userAlreadyHasAProfile !== null) {
-                  throw fastify.httpErrors.conflict(
-                    "User already has a profile"
-                  );
-                }
-
-                const profile = await fastify.db.profiles.create({
-                  userId: args.userId,
-                  memberTypeId: args.memberTypeId,
-                  avatar: args.avatar,
-                  sex: args.sex,
-                  birthday: args.birthday,
-                  country: args.country,
-                  city: args.city,
-                  street: args.street,
-                });
-
-                return profile;
-              },
-            },
-            createPost: {
-              type: GraphQLPost,
-              args: {
-                userId: { type: new GraphQLNonNull(GraphQLID) },
-                title: { type: new GraphQLNonNull(GraphQLString) },
-                content: { type: new GraphQLNonNull(GraphQLString) },
-              },
-              resolve: async (_: any, args: any) => {
-                const user = await fastify.db.users.findOne({
-                  key: "id",
-                  equals: args.userId,
-                });
-
-                if (user === null) {
-                  throw fastify.httpErrors.notFound("User not found");
-                }
-
-                const post = await fastify.db.posts.create({
-                  userId: args.userId,
-                  title: args.title,
-                  content: args.content,
-                });
-
-                return post;
               },
             },
           }),
