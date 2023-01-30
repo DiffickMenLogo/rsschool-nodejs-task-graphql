@@ -18,6 +18,10 @@ import {
   GraphQLProfile,
   CreateProfileInput,
   CreatePostInput,
+  UpdateUserInput,
+  UpdateProfileInput,
+  UpdatePostInput,
+  UpdateMemberTypeInput,
 } from "../types";
 import { graphqlBodySchema } from "./schema";
 
@@ -269,10 +273,9 @@ const plugin: FastifyPluginAsyncJsonSchemaToTs = async (
             updateUser: {
               type: GraphQLUser,
               args: {
-                id: { type: new GraphQLNonNull(GraphQLID) },
-                firstName: { type: GraphQLString },
-                lastName: { type: GraphQLString },
-                email: { type: GraphQLString },
+                varibles: {
+                  type: new GraphQLNonNull(UpdateUserInput),
+                },
               },
               resolve: async (_: any, args: any) => {
                 const user = await fastify.db.users.findOne({
@@ -295,14 +298,9 @@ const plugin: FastifyPluginAsyncJsonSchemaToTs = async (
             updateProfile: {
               type: GraphQLProfile,
               args: {
-                id: { type: new GraphQLNonNull(GraphQLID) },
-                avatar: { type: GraphQLString },
-                sex: { type: GraphQLString },
-                birthday: { type: GraphQLString },
-                country: { type: GraphQLString },
-                city: { type: GraphQLString },
-                street: { type: GraphQLString },
-                memberTypeId: { type: GraphQLString },
+                varibles: {
+                  type: new GraphQLNonNull(UpdateProfileInput),
+                },
               },
               resolve: async (_: any, args: any) => {
                 const profile = await fastify.db.profiles.findOne({
@@ -334,9 +332,9 @@ const plugin: FastifyPluginAsyncJsonSchemaToTs = async (
             updatePost: {
               type: GraphQLPost,
               args: {
-                id: { type: new GraphQLNonNull(GraphQLID) },
-                title: { type: GraphQLString },
-                content: { type: GraphQLString },
+                varibles: {
+                  type: new GraphQLNonNull(UpdatePostInput),
+                },
               },
               resolve: async (_: any, args: any) => {
                 const post = await fastify.db.posts.findOne({
@@ -359,9 +357,9 @@ const plugin: FastifyPluginAsyncJsonSchemaToTs = async (
             updateMemberType: {
               type: GraphQLMemberType,
               args: {
-                id: { type: new GraphQLNonNull(GraphQLID) },
-                discount: { type: GraphQLInt },
-                mouthPostsLimit: { type: GraphQLInt },
+                varibles: {
+                  type: new GraphQLNonNull(UpdateMemberTypeInput),
+                },
               },
               resolve: async (_: any, args: any) => {
                 const memberType = await fastify.db.memberTypes.findOne({
