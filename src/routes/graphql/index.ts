@@ -1,15 +1,12 @@
 import { CreateUserInput } from "./../types/inputTypes/CreateUserInput";
-import { FastifyInstance } from "fastify";
 import { FastifyPluginAsyncJsonSchemaToTs } from "@fastify/type-provider-json-schema-to-ts";
 import {
   graphql,
   GraphQLID,
-  GraphQLInt,
   GraphQLList,
   GraphQLNonNull,
   GraphQLObjectType,
   GraphQLSchema,
-  GraphQLString,
 } from "graphql";
 import {
   GraphQLUser,
@@ -24,33 +21,6 @@ import {
   UpdateMemberTypeInput,
 } from "../types";
 import { graphqlBodySchema } from "./schema";
-
-let i = 1;
-
-const prepareTestData = async (fastify: FastifyInstance) => {
-  const testUser = await fastify.db.users.create({
-    firstName: `User ${i}`,
-    lastName: `LastName ${i}`,
-    email: `user${i}@gmail.com`,
-  });
-
-  await fastify.db.profiles.create({
-    userId: testUser.id,
-    memberTypeId: "basic",
-    avatar: "avatar",
-    sex: "sometimes",
-    birthday: 5345345345,
-    country: "BY",
-    street: "Street",
-    city: "Minsk",
-  });
-
-  await fastify.db.posts.create({
-    userId: testUser.id,
-    title: `Title ${i}`,
-    content: "Content",
-  });
-};
 const plugin: FastifyPluginAsyncJsonSchemaToTs = async (
   fastify
 ): Promise<void> => {
@@ -62,10 +32,6 @@ const plugin: FastifyPluginAsyncJsonSchemaToTs = async (
       },
     },
     async function (request, reply) {
-      if (i <= 5) {
-        await prepareTestData(fastify);
-      }
-
       const shema = new GraphQLSchema({
         query: new GraphQLObjectType({
           name: "Query",
@@ -504,7 +470,6 @@ const plugin: FastifyPluginAsyncJsonSchemaToTs = async (
           schema: shema,
           source: request.body.query,
         });
-        i += 1;
         return result;
       } else {
         throw fastify.httpErrors.badRequest("Query not found");
